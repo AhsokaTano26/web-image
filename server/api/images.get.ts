@@ -4,19 +4,22 @@ import { join, resolve } from 'node:path'
 export default defineEventHandler((event) => {
   try {
     const query = getQuery(event)
-    // 注意：Nuxt 自动处理了 URL 参数解码，这里的 folderName 已经是中文
     const folderName = query.folder as string
 
-    // 1. 安全拦截：支持中文屏蔽列表
+    // 1. 安全拦截：检查是否在屏蔽列表中
     const envExcluded = process.env.EXCLUDED_FOLDERS || ''
+    // 处理屏蔽列表
     const EXCLUDED_FOLDERS = envExcluded
       .split(',')
-      .map(item => decodeURIComponent(item).trim()) // 处理可能的 URL 编码和空格
+      .map(item => item.trim().normalize()) // 标准化
       .filter(Boolean)
 
-    if (!folderName || EXCLUDED_FOLDERS.includes(folderName)) return []
+    // 对比时也进行标准化
+    if (!folderName || EXCLUDED_FOLDERS.includes(folderName.normalize())) {
+      return []
+    }
 
-    // 2. 路径对齐：指向 Docker 挂载点
+    // 2. 路径对齐：与文件夹接口保持一致
     const isProd = process.env.NODE_ENV === 'production'
     const baseDir = isProd
       ? '/app/.output/public/gallery'
@@ -30,14 +33,11 @@ export default defineEventHandler((event) => {
       return []
     }
 
-    // 4. 读取图片文件并进行 URL 编码
+    // 4. 读取图片文件
     const files = fs.readdirSync(targetDir)
     return files
       .filter(file => /\.(jpg|jpeg|png|webp|avif|gif)$/i.test(file))
-      .map(file => {
-        // 关键：对包含中文和特殊字符的路径进行编码，防止浏览器 404
-        return encodeURI(`/gallery/${folderName}/${file}`)
-      })
+      .map(file => `/gallery/${folderName}/${file}`)
 
   } catch (e) {
     console.error('[Gallery] 读取图片列表失败:', e)

@@ -65,10 +65,10 @@ onUnmounted(() => {
 
     <Transition name="scale">
       <div v-if="selectedImg" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4" @click="selectedImg = null">
-        <NuxtImg
+        <img
           :src="selectedImg"
-          sizes="sm:100vw md:80vw"
-          class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+          class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl transition-transform duration-300"
+          @click.stop
         />
         <p class="absolute bottom-6 text-white/40 text-xs">点击任意位置退出</p>
       </div>

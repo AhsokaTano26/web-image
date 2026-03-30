@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 export default defineEventHandler((event) => {
   try {
     const query = getQuery(event)
-    const folderName = query.folder as string
+    const folderName = decodeURIComponent(query.folder as string || '').trim()
 
     // 1. 安全拦截：检查是否在屏蔽列表中
     const envExcluded = process.env.EXCLUDED_FOLDERS || ''

@@ -1,27 +1,43 @@
 import fs from 'node:fs'
 import { join, resolve } from 'node:path'
 
-const envExcluded = process.env.EXCLUDED_FOLDERS || ''
-const EXCLUDED_FOLDERS = envExcluded.split(',').map(item => item.trim()).filter(Boolean)
-
 export default defineEventHandler(() => {
-  // 确保路径在不同操作系统下都能正确解析
-  const baseDir = resolve(process.cwd(), 'public/gallery')
+  // 1. 动态处理生产环境与开发环境的路径差异
+  // 生产环境 (Docker): .output/public/gallery
+  // 开发环境 (npm run dev): public/gallery
+  const isProd = process.env.NODE_ENV === 'production'
+  const baseDir = isProd
+    ? resolve(process.cwd(), '.output/public/gallery')
+    : resolve(process.cwd(), 'public/gallery')
 
+  // 2. 从环境变量读取屏蔽列表
+  const envExcluded = process.env.EXCLUDED_FOLDERS || ''
+  const EXCLUDED_FOLDERS = envExcluded.split(',').map(item => item.trim()).filter(Boolean)
+
+  // 检查基础目录
   if (!fs.existsSync(baseDir)) {
-    console.warn(`[Gallery] 基础目录不存在: ${baseDir}`)
+    console.warn(`[Gallery] 扫描路径不存在: ${baseDir}`)
+    // 如果生产环境下依然找不到，尝试暴力兼容（直接找容器根部的挂载点）
+    if (isProd && fs.existsSync('/app/public/gallery')) {
+        return scanDirectory('/app/public/gallery', EXCLUDED_FOLDERS)
+    }
     return []
   }
 
+  return scanDirectory(baseDir, EXCLUDED_FOLDERS)
+})
+
+// 抽离扫描逻辑，方便复用和维护
+function scanDirectory(baseDir: string, excluded: string[]) {
   try {
     const folderNames = fs.readdirSync(baseDir).filter(file => {
       const fullPath = join(baseDir, file)
-      // 必须加上 try-catch 或 check，防止在读取某些系统保护文件夹时权限报错
       try {
+        const stats = fs.statSync(fullPath)
         return (
-          fs.statSync(fullPath).isDirectory() &&
+          stats.isDirectory() &&
           !file.startsWith('.') &&
-          !EXCLUDED_FOLDERS.includes(file)
+          !excluded.includes(file)
         )
       } catch {
         return false
@@ -30,20 +46,19 @@ export default defineEventHandler(() => {
 
     return folderNames.map(name => {
       const folderPath = join(baseDir, name)
-      // 增加一层保护，防止在读取子目录时该目录被意外删除
       const files = fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : []
 
-      // 找到第一张图片作为封面
+      // 这里的正则表达式忽略大小写 (i)，解决 .PNG 404 问题
       const firstImg = files.find(file => /\.(jpg|jpeg|png|webp|avif)$/i.test(file))
 
       return {
         name,
-        // 关键：确保路径始终以 / 开头，方便前端静态资源访问
+        // 返回给前端的 URL 始终是 /gallery/...
         cover: firstImg ? `/gallery/${name}/${firstImg}` : null
       }
     })
   } catch (error) {
-    console.error('[Gallery] 读取文件夹列表失败:', error)
+    console.error('[Gallery] 扫描失败:', error)
     return []
   }
-})
+}

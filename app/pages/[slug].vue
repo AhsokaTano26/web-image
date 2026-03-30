@@ -43,7 +43,7 @@ onUnmounted(() => {
           class="group relative aspect-square bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer"
         >
           <div class="relative w-full aspect-square overflow-hidden rounded-xl bg-gray-200">
-            <img
+            <NuxtImg
               :src="img"
               loading="lazy"
               class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -65,10 +65,10 @@ onUnmounted(() => {
 
     <Transition name="scale">
       <div v-if="selectedImg" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4" @click="selectedImg = null">
-        <img
+        <NuxtImg
           :src="selectedImg"
-          class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl transition-transform duration-300"
-          @click.stop
+          sizes="sm:100vw md:80vw"
+          class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
         />
         <p class="absolute bottom-6 text-white/40 text-xs">点击任意位置退出</p>
       </div>

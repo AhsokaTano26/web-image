@@ -22,7 +22,7 @@ const { data: folders } = await useFetch('/api/folders', {
         style="width: 320px; flex: 0 0 320px;"
       >
         <div class="relative overflow-hidden bg-slate-100" style="height: 240px;">
-          <img
+          <NuxtImg
             v-if="f.cover"
             :src="f.cover"
             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
